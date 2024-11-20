@@ -185,7 +185,7 @@ class GraphMap(object):
         if self.last_del_ghost == '':
             cur_vp = str(self.allnode_cnt)
             self.allnode_cnt += 1
-        else
+        else:
             cur_vp = self.last_del_ghost
             self.last_del_ghost == ''
         

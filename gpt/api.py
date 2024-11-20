@@ -1,10 +1,14 @@
-from openai import OpenAI
+# from openai import OpenAI
 import base64
 from tenacity import (
     retry,
     stop_after_attempt,
     wait_random_exponential,
 )  # for exponential backoff
+import os
+import json
+import subprocess
+import logging
 
 
 # 获取环境变量
@@ -121,7 +125,7 @@ def gpt_infer(system, text, image_list, model="gpt-4o-2024-08-06", max_tokens=60
         # 调用 GPT 接口（带重试逻辑）
         response = completion_with_backoff(data)
 
-        验证 response 格式
+        # 验证 response 格式
         if not isinstance(response, dict):
             raise ValueError("API 返回的数据格式无效")
 

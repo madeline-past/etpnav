@@ -334,7 +334,7 @@ class ETP(Net):
             # obs_view12_counterclockwise = {}
             # obs_view12_counterclockwise['rgb'] = observations['rgb']
             cand_img = []
-            for i in range(batch_size)
+            for i in range(batch_size):
                 cand_img.append(process_batch_data(observations['rgb'][i], cand_img_idxes))
 
 
@@ -366,15 +366,14 @@ class ETP(Net):
             return outs
 
         elif mode == 'navigation':
-            # outs = self.vln_bert.forward_navigation(
-            #     txt_embeds, txt_masks, 
-            #     gmap_vp_ids, gmap_step_ids,
-            #     gmap_img_fts, gmap_pos_fts, 
-            #     gmap_masks, gmap_visited_masks, gmap_pair_dists,
-            # )
-            # return outs
+            outs = self.vln_bert.forward_navigation(
+                txt_embeds, txt_masks, 
+                gmap_vp_ids, gmap_step_ids,
+                gmap_img_fts, gmap_pos_fts, 
+                gmap_masks, gmap_visited_masks, gmap_pair_dists,
+            )
+            return outs
 
-            # new
 
 
 
