@@ -31,8 +31,9 @@ from vlnce_baselines.models.utils import (
     angle_feature_with_ele, dir_angle_feature_with_ele, angle_feature_torch, length2mask)
 import math
 
-from gpt.pictures import save_tensor_as_images
-from gpt.pictures import delete_png_images_in_directory
+from gpt.changes import filter_minimum_distances
+# from gpt.pictures import save_tensor_as_images
+# from gpt.pictures import delete_png_images_in_directory
 from gpt.pictures import process_batch_data
 
 @baseline_registry.register_policy
@@ -307,6 +308,8 @@ class ETP(Net):
                 else:
                     angle_idxes = batch_output_map[j].nonzero()[:, 0]
                     distance_idxes = batch_output_map[j].nonzero()[:, 1]
+                    #llm plan目前选择同一视角中距离最近的waypoint
+                    angle_idxes, distance_idxes = filter_minimum_distances(angle_idxes, distance_idxes)
                 # for angle & distance
                 angle_rad_c = angle_idxes.cpu().float()/120*2*math.pi       # 顺时针
                 angle_rad_cc = 2*math.pi-angle_idxes.float()/120*2*math.pi  # 逆时针
@@ -327,11 +330,13 @@ class ETP(Net):
             pano_angle_fts = deepcopy(self.pano_angle_fts)  # 12 x 4
             pano_img_idxes = deepcopy(self.pano_img_idxes)  # 12
 
-            obs_view12_counterclockwise = {}
-            obs_view12_counterclockwise['rgb'] = observations['rgb']
+
+            # obs_view12_counterclockwise = {}
+            # obs_view12_counterclockwise['rgb'] = observations['rgb']
             cand_img = []
-            for _ in range(batch_size)
-                cand_img.append(process_batch_data(obs_view12_counterclockwise, cand_img_idxes))
+            for i in range(batch_size)
+                cand_img.append(process_batch_data(observations['rgb'][i], cand_img_idxes))
+
 
             # cand_angle_fts 顺时针
             # cand_angles 逆时针

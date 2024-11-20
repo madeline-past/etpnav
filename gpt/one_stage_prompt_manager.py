@@ -3,15 +3,17 @@ import math
 
 
 class OneStagePromptManager(object):
-    def __init__(self, args):
+    def __init__(self):
 
-        self.args = args
-        self.history  = ['' for _ in range(self.args.batch_size)]
-        self.nodes_list = [[] for _ in range(self.args.batch_size)]
-        self.node_imgs = [[] for _ in range(self.args.batch_size)]
-        self.graph  = [{} for _ in range(self.args.batch_size)]
-        self.trajectory = [[] for _ in range(self.args.batch_size)]
-        self.planning = [["Navigation has just started, with no planning yet."] for _ in range(self.args.batch_size)]
+        # self.args = args
+        self.batch_size = 1
+        self.stop_after = 3
+        self.history  = ['' for _ in range(self.batch_size)]
+        self.nodes_list = [[] for _ in range(self.batch_size)]
+        self.node_imgs = [[] for _ in range(self.batch_size)]
+        self.graph  = [{} for _ in range(self.batch_size)]
+        self.trajectory = [[] for _ in range(self.batch_size)]
+        self.planning = [["Navigation has just started, with no planning yet."] for _ in range(self.batch_size)]
 
     def get_action_concept(self, rel_heading, rel_elevation):
         if rel_elevation > 0:
@@ -38,7 +40,7 @@ class OneStagePromptManager(object):
 
         return action_text
 
-    def make_action_prompt(self, obs):
+    def make_action_prompt(self, vp, cand_wp, cand_img, nearby_cand_wp):
 
         nodes_list, graph, trajectory, node_imgs = self.nodes_list, self.graph, self.trajectory, self.node_imgs
 
@@ -46,50 +48,50 @@ class OneStagePromptManager(object):
         batch_cand_index = []
         batch_action_prompts = []
 
-        for i, ob in enumerate(obs):
+        for i, (viewpoint, cand_waypoint, c_img, nb_cand_wp) in enumerate(zip(vp, cand_wp, cand_img, nearby_cand_wp)):
             cand_vpids = []
             cand_index = []
             action_prompts = []
 
-            if ob['viewpoint'] not in nodes_list[i]:
+            if viewpoint not in nodes_list[i]:
                 # update nodes list (place 0)
-                nodes_list[i].append(ob['viewpoint'])
+                nodes_list[i].append(viewpoint)
                 node_imgs[i].append(None)
 
             # update trajectory
-            trajectory[i].append(ob['viewpoint'])
+            trajectory[i].append(viewpoint)
 
             # cand views
-            for j, cc in enumerate(ob['candidate']):
+            for j, (cc, img) in enumerate(zip(cand_waypoint, c_img)):
 
-                cand_vpids.append(cc['viewpointId'])
-                cand_index.append(cc['pointId'])
+                cand_vpids.append(cc)
+                # cand_index.append(cc['pointId'])
                 # direction = self.get_action_concept(cc['absolute_heading'] - previous_angle[i]['heading'],
                 #                                           cc['absolute_elevation'] - 0)
 
-                if cc['viewpointId'] not in nodes_list[i]:
-                    nodes_list[i].append(cc['viewpointId'])
-                    node_imgs[i].append(cc['image'])
-                    node_index = nodes_list[i].index(cc['viewpointId'])
+                if cc not in nodes_list[i]:
+                    nodes_list[i].append(cc)
+                    node_imgs[i].append(img)
+                    node_index = nodes_list[i].index(cc)
                 else:
-                    node_index = nodes_list[i].index(cc['viewpointId'])
-                    node_imgs[i][node_index] = cc['image']
+                    node_index = nodes_list[i].index(cc)
+                    node_imgs[i][node_index] = img
 
                 # action_text = direction + f" to Place {node_index} which is corresponding to Image {node_index}"
                 action_text = f" Go to Place {node_index} which is corresponding to Image {node_index}"
                 action_prompts.append(action_text)
 
-            batch_cand_index.append(cand_index)
+            # batch_cand_index.append(cand_index)
             batch_cand_vpids.append(cand_vpids)
             batch_action_prompts.append(action_prompts)
 
             # update graph
-            if ob['viewpoint'] not in graph[i].keys():
-                graph[i][ob['viewpoint']] = cand_vpids
+            if viewpoint not in graph[i].keys():
+                graph[i][viewpoint] = nb_cand_wp
 
         return {
             'cand_vpids': batch_cand_vpids,
-            'cand_index':batch_cand_index,
+            # 'cand_index':batch_cand_index,
             'action_prompts': batch_action_prompts,
         }
 
@@ -101,8 +103,8 @@ class OneStagePromptManager(object):
 
         for i in range(batch_size):
             action_prompts = batch_action_prompts[i]
-            if bool(self.args.stop_after):
-                if t >= self.args.stop_after:
+            if bool(self.stop_after):
+                if t >= self.stop_after:
                     action_prompts = ['stop'] + action_prompts
 
             full_action_options = [chr(j + 65)+'. '+action_prompts[j] for j in range(len(action_prompts))]
@@ -148,7 +150,8 @@ class OneStagePromptManager(object):
                     adj_index = nodes_list.index(adj_node)
                     adj_text += f""" {adj_index},"""
 
-                graph_text += f"""\nPlace {node_index} is connected with Places{adj_text}"""[:-1]
+                # graph_text += f"""\nPlace {node_index} is connected with Places{adj_text}"""[:-1]
+                graph_text += f"""\nPlace {node_index} is connected with Places{adj_text}"""
 
         # ghost nodes info
         graph_supp_text = ''
@@ -214,7 +217,7 @@ class OneStagePromptManager(object):
 
         return nav_input
 
-    def make_r2r_json_prompts(self, obs, cand_inputs, t):
+    def make_r2r_json_prompts(self, instr, cand_inputs, t):
 
         background = """You are an embodied robot that navigates in the real world."""
         background_supp = """You need to explore between some places marked with IDs and ultimately find the destination to stop.""" \
@@ -238,11 +241,11 @@ class OneStagePromptManager(object):
 
         init_history = 'The navigation has just begun, with no history.'
 
-        batch_size = len(obs)
+        batch_size = len(instr)
         action_options_batch, only_options_batch = self.make_action_options(cand_inputs, t=t)
         prompt_batch = []
         for i in range(batch_size):
-            instruction = obs[i]["instruction"]
+            instruction = instr[i]
 
             trajectory_text, graph_text, graph_supp_text = self.make_map_prompt(i)
 
@@ -328,8 +331,8 @@ class OneStagePromptManager(object):
                 output_index = 0
                 output_index_batch.append(output_index)
 
-        if bool(self.args.stop_after):
-            if t < self.args.stop_after:
+        if bool(self.stop_after):
+            if t < self.stop_after:
                 for i in range(batch_size):
                     output_index_batch[i] = output_index_batch[i] + 1  # add 1 to index (avoid stop within 3 steps)
         return output_index_batch
@@ -345,8 +348,8 @@ class OneStagePromptManager(object):
         except:
             output_index = 0
 
-        if bool(self.args.stop_after):
-            if t < self.args.stop_after:
+        if bool(self.stop_after):
+            if t < self.stop_after:
                 output_index += 1  # add 1 to index (avoid stop within 3 steps)
 
         output_index_batch = [output_index]

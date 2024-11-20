@@ -85,11 +85,11 @@ def process_batch_data(obs_view12_counterclockwise, img_idxes):
     - cand_inputs: list，包含格式化后的图片 Base64 编码和角度数据。
     """
     # 筛选出指定索引的图片
-    selected_images = obs_view12_counterclockwise['rgb'][img_idxes]
+    selected_images = obs_view12_counterclockwise[img_idxes]
 
     # 根据索引计算对应角度（直接乘以 30）
     angles_deg = img_idxes * 30
-    print(angles_deg)
+    # print(angles_deg)
 
     # 构建 JSON 格式化的候选输入
     cand_inputs = []

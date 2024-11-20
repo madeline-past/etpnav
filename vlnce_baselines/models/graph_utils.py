@@ -145,6 +145,7 @@ class GraphMap(object):
         self.node_stepId = {}
 
         self.ghost_cnt = 0          # id to create ghost 
+        self.allnode_cnt = 0
         self.ghost_pos = {}
         self.ghost_mean_pos = {}
         self.ghost_embeds = {}      # viewpoint to single_view feature
@@ -159,6 +160,8 @@ class GraphMap(object):
         self.shortest_dist = None
         
         self.node_stop_scores = {}  # viewpoint to stop_score
+
+        self.last_del_ghost = ''
 
     def _localize(self, qpos, kpos_dict, ignore_height=False):
         min_dis = 10000
@@ -177,7 +180,15 @@ class GraphMap(object):
     def identify_node(self, cur_pos, cur_ori, cand_ang, cand_dis):
         # assume no repeated node
         # since action is restricted to ghosts
-        cur_vp = str(len(self.node_pos))
+
+        # cur_vp = str(len(self.node_pos))
+        if self.last_del_ghost == '':
+            cur_vp = str(self.allnode_cnt)
+            self.allnode_cnt += 1
+        else
+            cur_vp = self.last_del_ghost
+            self.last_del_ghost == ''
+        
         cand_vp = [f'{cur_vp}_{str(i)}' for i in range(len(cand_ang))]
         cand_pos = [p for p in estimate_cand_pos(cur_pos, cur_ori, cand_ang, cand_dis)]
         return cur_vp, cand_vp, cand_pos
@@ -189,11 +200,14 @@ class GraphMap(object):
         self.ghost_fronts.pop(vp)
         if self.has_real_pos:
             self.ghost_real_pos.pop(vp)
+        self.last_del_ghost = vp
 
     def update_graph(self, prev_vp, step_id,
                            cur_vp, cur_pos, cur_embeds,
                            cand_vp, cand_pos, cand_embeds, 
                            cand_real_pos):
+        nearby_cand_wp = []
+        
         # 1. connect prev_vp
         self.graph_nx.add_node(cur_vp)
         if prev_vp is not None:
@@ -217,7 +231,9 @@ class GraphMap(object):
                     localized_gvp = self._localize(cpos, self.ghost_mean_pos)
                     # create ghost
                     if localized_gvp is None:
-                        gvp = f'g{str(self.ghost_cnt)}'
+                        # gvp = f'g{str(self.ghost_cnt)}'
+                        gvp = str(self.allnode_cnt)
+                        self.allnode_cnt += 1
                         self.ghost_cnt += 1
                         self.ghost_pos[gvp] = [cpos]
                         self.ghost_mean_pos[gvp] = cpos
@@ -225,6 +241,7 @@ class GraphMap(object):
                         self.ghost_fronts[gvp] = [cur_vp]
                         if self.has_real_pos:
                             self.ghost_real_pos[gvp] = [cand_real_pos[i]]
+                        nearby_cand_wp.append(gvp)
                     # update ghost
                     else:
                         gvp = localized_gvp
@@ -235,8 +252,11 @@ class GraphMap(object):
                         self.ghost_fronts[gvp].append(cur_vp)
                         if self.has_real_pos:
                             self.ghost_real_pos[gvp].append(cand_real_pos[i])
+                        nearby_cand_wp.append(gvp)
                 else:
-                    gvp = f'g{str(self.ghost_cnt)}'
+                    # gvp = f'g{str(self.ghost_cnt)}'
+                    gvp = str(self.allnode_cnt)
+                    self.allnode_cnt += 1
                     self.ghost_cnt += 1
                     self.ghost_pos[gvp] = [cpos]
                     self.ghost_mean_pos[gvp] = cpos
@@ -244,6 +264,7 @@ class GraphMap(object):
                     self.ghost_fronts[gvp] = [cur_vp]
                     if self.has_real_pos:
                         self.ghost_real_pos[gvp] = [cand_real_pos[i]]
+                    nearby_cand_wp.append(gvp)
         
         self.ghost_aug_pos = deepcopy(self.ghost_mean_pos)
         if self.ghost_aug != 0:
@@ -255,6 +276,8 @@ class GraphMap(object):
 
         self.shortest_path = dict(nx.all_pairs_dijkstra_path(self.graph_nx))
         self.shortest_dist = dict(nx.all_pairs_dijkstra_path_length(self.graph_nx))
+
+        return nearby_cand_wp
 
     def front_to_ghost_dist(self, ghost_vp):
         # assume the nearest front
@@ -270,7 +293,8 @@ class GraphMap(object):
         return min_dis, min_front
 
     def get_node_embeds(self, vp):
-        if not vp.startswith('g'):
+        # if not vp.startswith('g'):
+        if vp in list(self.node_pos.keys()):
             return self.node_embeds[vp]
         else:
             return self.ghost_embeds[vp][0] / self.ghost_embeds[vp][1]
@@ -284,7 +308,8 @@ class GraphMap(object):
                 rel_angles.append([0, 0])
                 rel_dists.append([0, 0, 0])
             # for ghost
-            elif vp.startswith('g'):
+            # elif vp.startswith('g'):
+            elif vp in list(self.ghost_pos.keys()):
                 base_heading = heading_from_quaternion(cur_ori)
                 base_elevation = 0
                 vp_pos = self.ghost_aug_pos[vp]

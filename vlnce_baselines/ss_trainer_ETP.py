@@ -777,6 +777,14 @@ class RLTrainer(BaseVLNCETrainer):
         self.envs.resume_all()
         observations = self.envs.reset()
 
+
+        assert self.envs.num_envs == 1,'only support batch size of 1'
+        instr = []
+        instr.append = observations[0]['instruction']['text']
+
+        agent = GPTNavAgent()
+
+
         instr_max_len = self.config.IL.max_text_len # r2r 80, rxr 200
         instr_pad_id = 1 if self.config.MODEL.task_type == 'rxr' else 0
         observations = extract_instruction_tokens(observations, self.config.TASK_CONFIG.TASK.INSTRUCTION_SENSOR_UUID,
@@ -802,10 +810,10 @@ class RLTrainer(BaseVLNCETrainer):
                     self.inst_ids[ep_id] = int(k)
 
 
-        batch_size = len(self.envs.num_envs)
-        instr = [ '' for _ in batch_size]
-        for i in range(batch_size):
-            instr[i] = observations[i]['instruction']['text']
+
+
+
+
 
 
         # encode instructions
@@ -829,8 +837,6 @@ class RLTrainer(BaseVLNCETrainer):
                                ghost_aug) for _ in range(self.envs.num_envs)]
         prev_vp = [None] * self.envs.num_envs
 
-
-        agent = [GPTNavAgent() for _ in range(batch_size)]
 
 
         for stepk in range(self.max_len):
@@ -877,14 +883,22 @@ class RLTrainer(BaseVLNCETrainer):
             else:
                 cand_real_pos = [None] * self.envs.num_envs
 
+            nearby_cand_wp = []
             for i in range(self.envs.num_envs):
                 cur_embeds = avg_pano_embeds[i]
                 cand_embeds = pano_embeds[i][vp_inputs['nav_types'][i]==1]
-                self.gmaps[i].update_graph(prev_vp[i], stepk+1,
+                nearby_cand_wp.append(self.gmaps[i].update_graph(prev_vp[i], stepk+1,
                                            cur_vp[i], cur_pos[i], cur_embeds,
                                            cand_vp[i], cand_pos[i], cand_embeds,
-                                           cand_real_pos[i])
+                                           cand_real_pos[i]))
 
+
+            gmap_vp_ids = []
+            for i, gmap in enumerate(self.gmaps):
+                node_vp_ids = list(gmap.node_pos.keys())
+                ghost_vp_ids = list(gmap.ghost_pos.keys())
+                vp_ids = [None] + node_vp_ids + ghost_vp_ids
+                gmap_vp_ids.append(gmap_vp_ids)
 
             # nav_inputs = self._nav_gmap_variable(cur_vp, cur_pos, cur_ori)
             # nav_inputs.update({
@@ -916,11 +930,19 @@ class RLTrainer(BaseVLNCETrainer):
 
 
 
-            for i in range(batch_size)
-                # vp_name = self.gmaps[i].node_pos.values()
 
-                agent[i].rollout(cur_vp[i], batch_size, cur_vp[i])
 
+            # batch_size = len(self.envs.num_envs)
+            # instr = [ '' for _ in batch_size]
+            # for i in range(batch_size):
+            #     instr[i] = observations[i]['instruction']['text']
+
+
+            # vp_name = self.gmaps[i].node_pos.values()
+
+            a_t = agent.rollout(cur_vp, nearby_cand_wp, self.gmaps, 1, instr, wp_outputs['cand_img'], stepk)
+            if a_t[0]!=0:
+                a_t[0] += len(gmap.node_pos.keys())
 
 
 
@@ -934,15 +956,15 @@ class RLTrainer(BaseVLNCETrainer):
             if mode == 'train':
                 loss += F.cross_entropy(nav_logits, teacher_actions, reduction='sum', ignore_index=-100)
 
-            # determine action
-            if feedback == 'sample':
-                c = torch.distributions.Categorical(nav_probs)
-                a_t = c.sample().detach()
-                a_t = torch.where(torch.rand_like(a_t, dtype=torch.float)<=sample_ratio, teacher_actions, a_t)
-            elif feedback == 'argmax':
-                a_t = nav_logits.argmax(dim=-1)
-            else:
-                raise NotImplementedError
+            # # determine action
+            # if feedback == 'sample':
+            #     c = torch.distributions.Categorical(nav_probs)
+            #     a_t = c.sample().detach()
+            #     a_t = torch.where(torch.rand_like(a_t, dtype=torch.float)<=sample_ratio, teacher_actions, a_t)
+            # elif feedback == 'argmax':
+            #     a_t = nav_logits.argmax(dim=-1)
+            # else:
+            #     raise NotImplementedError
             cpu_a_t = a_t.cpu().numpy()
 
             # make equiv action
@@ -956,8 +978,8 @@ class RLTrainer(BaseVLNCETrainer):
                     # stop_vp = vp_stop_scores[np.argmax(stop_scores)][0]
                     # stop_pos = gmap.node_pos[stop_vp]
 
-                    stop_vp = gmap.
-                    stop_pos = 
+                    stop_vp = cur_vp[i]
+                    stop_pos = gmap.node_pos[stop_vp]
 
 
                     if self.config.IL.back_algo == 'control':
@@ -1022,8 +1044,9 @@ class RLTrainer(BaseVLNCETrainer):
                         }
                     )
                     prev_vp[i] = front_vp
-                    if self.config.MODEL.consume_ghost:
-                        gmap.delete_ghost(ghost_vp)
+                    # if self.config.MODEL.consume_ghost:
+                    #     gmap.delete_ghost(ghost_vp)
+                    gmap.delete_ghost(ghost_vp)
 
             outputs = self.envs.step(env_actions)
             observations, _, dones, infos = [list(x) for x in zip(*outputs)]
