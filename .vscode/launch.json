@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "etpnav",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder}/run.py",  // Path to your run.py script
+        "args": [
+          "--exp_name", "release_r2r",
+          "--run-type", "eval",
+          "--exp-config", "run_r2r/iter_train.yaml",
+          "SIMULATOR_GPU_IDS", "[0]",
+          "TORCH_GPU_IDS", "[0]",
+          "GPU_NUMBERS", "1",
+          "NUM_ENVIRONMENTS", "1",
+          "TASK_CONFIG.SIMULATOR.HABITAT_SIM_V0.ALLOW_SLIDING", "True",
+          "EVAL.CKPT_PATH_DIR", "data/logs/checkpoints/release_r2r/ckpt.iter12000.pth",
+          "IL.back_algo", "control"
+        ],
+        "env": {
+          "CUDA_VISIBLE_DEVICES": "0",  // Use specific GPUs for the distributed training
+          "MASTER_PORT": "2333",
+          "WORLD_SIZE": "1"
+        },
+        "console": "integratedTerminal",  // This allows the output to show up in the integrated terminal
+        //"pythonPath": "path_to_your_python_interpreter",  // Specify your Python interpreter path if needed
+        //"debugOptions": ["RedirectOutput"]  // Optional: To capture and redirect output for debugging
+      }
+    ]
+  }
+  
