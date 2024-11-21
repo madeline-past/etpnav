@@ -884,14 +884,16 @@ class RLTrainer(BaseVLNCETrainer):
                 cand_real_pos = [None] * self.envs.num_envs
 
             nearby_cand_wp = []
+            cand_imgs = []
             for i in range(self.envs.num_envs):
                 cur_embeds = avg_pano_embeds[i]
                 cand_embeds = pano_embeds[i][vp_inputs['nav_types'][i]==1]
-                nearby_cand_wp.append(self.gmaps[i].update_graph(prev_vp[i], stepk+1,
+                nearby_wp,  imgs = self.gmaps[i].update_graph(prev_vp[i], stepk+1,
                                            cur_vp[i], cur_pos[i], cur_embeds,
                                            cand_vp[i], cand_pos[i], cand_embeds,
-                                           cand_real_pos[i]))
-
+                                           cand_real_pos[i],wp_outputs['cand_img'][i])
+                nearby_cand_wp.append(nearby_wp)
+                cand_imgs.append(imgs)
 
             gmap_vp_ids = []
             for i, gmap in enumerate(self.gmaps):
@@ -940,7 +942,7 @@ class RLTrainer(BaseVLNCETrainer):
 
             # vp_name = self.gmaps[i].node_pos.values()
 
-            a_t = agent.rollout(cur_vp, nearby_cand_wp, self.gmaps, 1, instr, wp_outputs['cand_img'], stepk)
+            a_t = agent.rollout(cur_vp, nearby_cand_wp, self.gmaps, 1, instr, cand_imgs, stepk)
             if a_t[0]!=0:
                 a_t[0] += len(gmap.node_pos.keys())
 

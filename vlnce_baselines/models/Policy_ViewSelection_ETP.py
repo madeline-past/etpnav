@@ -333,9 +333,10 @@ class ETP(Net):
 
             # obs_view12_counterclockwise = {}
             # obs_view12_counterclockwise['rgb'] = observations['rgb']
+            rgb_counterclockwise = torch.cat([rgb_batch[:1], torch.flip(rgb_batch[1:], [0])], dim=0)
             cand_img = []
             for i in range(batch_size):
-                cand_img.append(process_batch_data(observations['rgb'][i], cand_img_idxes))
+                cand_img.append(process_batch_data(rgb_counterclockwise, cand_img_idxes))
 
 
             # cand_angle_fts 顺时针
