@@ -81,13 +81,13 @@ def gpt_infer(system, text, image_list, model="gpt-4o-2024-08-06", max_tokens=60
                 },
             )
 
-            with open(image, "rb") as image_file:
-                image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+            # with open(image, "rb") as image_file:
+            #     image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
 
             image_message = {
                      "type": "image_url",
                      "image_url": {
-                         "url": f"data:image/jpeg;base64,{image_base64}",
+                         "url": f"data:image/jpeg;base64,{image}",
                          "detail": "low"
                      }
                  }

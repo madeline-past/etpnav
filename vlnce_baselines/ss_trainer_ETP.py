@@ -378,12 +378,12 @@ class RLTrainer(BaseVLNCETrainer):
                 for k in range(j+1, len(gmap_vp_ids)):
                     vp1 = gmap_vp_ids[j]
                     vp2 = gmap_vp_ids[k]
-                    if not vp1.startswith('g') and not vp2.startswith('g'):
+                    if vp1 in list(gmap.node_pos.keys()) and vp2 in list(gmap.node_pos.keys()):
                         dist = gmap.shortest_dist[vp1][vp2]
-                    elif not vp1.startswith('g') and vp2.startswith('g'):
+                    elif vp1 in list(gmap.node_pos.keys()) and not vp2 in list(gmap.node_pos.keys()):
                         front_dis2, front_vp2 = gmap.front_to_ghost_dist(vp2)
                         dist = gmap.shortest_dist[vp1][front_vp2] + front_dis2
-                    elif vp1.startswith('g') and vp2.startswith('g'):
+                    elif not vp1 in list(gmap.node_pos.keys()) and not vp2 in list(gmap.node_pos.keys()):
                         front_dis1, front_vp1 = gmap.front_to_ghost_dist(vp1)
                         front_dis2, front_vp2 = gmap.front_to_ghost_dist(vp2)
                         dist = front_dis1 + gmap.shortest_dist[front_vp1][front_vp2] + front_dis2
@@ -780,7 +780,7 @@ class RLTrainer(BaseVLNCETrainer):
 
         assert self.envs.num_envs == 1,'only support batch size of 1'
         instr = []
-        instr.append = observations[0]['instruction']['text']
+        instr.append(observations[0]['instruction']['text'])
 
         agent = GPTNavAgent()
 
@@ -900,13 +900,13 @@ class RLTrainer(BaseVLNCETrainer):
                 vp_ids = [None] + node_vp_ids + ghost_vp_ids
                 gmap_vp_ids.append(gmap_vp_ids)
 
-            # nav_inputs = self._nav_gmap_variable(cur_vp, cur_pos, cur_ori)
+            nav_inputs = self._nav_gmap_variable(cur_vp, cur_pos, cur_ori)
             # nav_inputs.update({
             #     'mode': 'navigation',
             #     'txt_embeds': txt_embeds,
             #     'txt_masks': txt_masks,
             # })
-            # no_vp_left = nav_inputs.pop('no_vp_left')
+            no_vp_left = nav_inputs.pop('no_vp_left')
             # nav_outs = self.policy.net(**nav_inputs)
             # nav_logits = nav_outs['global_logits']
             # nav_probs = F.softmax(nav_logits, 1)
@@ -965,7 +965,8 @@ class RLTrainer(BaseVLNCETrainer):
             #     a_t = nav_logits.argmax(dim=-1)
             # else:
             #     raise NotImplementedError
-            cpu_a_t = a_t.cpu().numpy()
+            # cpu_a_t = a_t.cpu().numpy()
+            cpu_a_t = a_t
 
             # make equiv action
             env_actions = []

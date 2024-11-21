@@ -106,10 +106,11 @@ def process_batch_data(obs_view12_counterclockwise, img_idxes):
         img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
         # 添加到候选列表
-        cand_inputs.append({
-            "image": img_str,  # Base64 编码的图像数据
-            "angle": angle  # 直接使用计算的角度
-        })
+        # cand_inputs.append({
+        #     "image": img_str,  # Base64 编码的图像数据
+        #     "angle": angle  # 直接使用计算的角度
+        # })
+        cand_inputs.append(img_str)
 
     return cand_inputs
 

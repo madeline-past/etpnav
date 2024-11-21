@@ -89,7 +89,7 @@ class GPTNavAgent():
         # self.prompt_manager.planning = [["Navigation has just started, with no planning yet."] for _ in range(batch_size)]
 
 
-        ghost_vp_ids = [list(gmap.ghost_pos.keys()) for i in range(batch_size)]
+        ghost_vp_ids = [list(gmaps[i].ghost_pos.keys()) for i in range(batch_size)]
 
 
 
