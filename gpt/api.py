@@ -72,8 +72,11 @@ def completion_with_backoff(data):
 def gpt_infer(system, text, image_list, model="gpt-4o-2024-08-06", max_tokens=600, response_format=None):
 
     user_content = []
+    image_len = 0
     for i, image in enumerate(image_list):
         if image is not None:
+            image_len += 1
+            assert image_len <= 20,'Exceed image limit and stop!'
             user_content.append(
                 {
                     "type": "text",

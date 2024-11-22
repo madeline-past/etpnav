@@ -120,19 +120,27 @@ class GPTNavAgent():
             self.prompt_manager.parse_planning(nav_output=nav_output)
 
         elif llm == 'gpt-4o-2024-08-06' and response_format == 'json':
-            if len(image_list) > 20:
-                # GPT-4o currently does not support queries with more than 20 images
-                a_t = [0]
-                print('Exceed image limit and stop!')
-            else:
-                nav_output, tokens = gpt_infer(nav_input["task_description"], environment_prompts, image_list,
-                                                llm, response_format={"type": "json_object"})
-                json_output = json.loads(nav_output)
-                a_t = self.prompt_manager.parse_json_action(json_output, nav_input["only_options"], t)
-                self.prompt_manager.parse_json_planning(json_output)
-                print('-------------------- Output --------------------')
-                print(nav_output)
-                print(f"tokens:{tokens}")
+            # if len(image_list) > 20:
+            #     # GPT-4o currently does not support queries with more than 20 images
+            #     a_t = [0]
+            #     print('Exceed image limit and stop!')
+            # else:
+            #     nav_output, tokens = gpt_infer(nav_input["task_description"], environment_prompts, image_list,
+            #                                     llm, response_format={"type": "json_object"})
+            #     json_output = json.loads(nav_output)
+            #     a_t = self.prompt_manager.parse_json_action(json_output, nav_input["only_options"], t)
+            #     self.prompt_manager.parse_json_planning(json_output)
+            #     print('-------------------- Output --------------------')
+            #     print(nav_output)
+            #     print(f"tokens:{tokens}")
+            nav_output, tokens = gpt_infer(nav_input["task_description"], environment_prompts, image_list,
+                                            llm, response_format={"type": "json_object"})
+            json_output = json.loads(nav_output)
+            a_t = self.prompt_manager.parse_json_action(json_output, nav_input["only_options"], t)
+            self.prompt_manager.parse_json_planning(json_output)
+            print('-------------------- Output --------------------')
+            print(nav_output)
+            print(f"tokens:{tokens}")
 
         else:
             raise NotImplemented

@@ -67,7 +67,8 @@ from gpt.gpt_agent import GPTNavAgent
 class RLTrainer(BaseVLNCETrainer):
     def __init__(self, config=None):
         super().__init__(config)
-        self.max_len = int(config.IL.max_traj_len) #  * 0.97 transfered gt path got 0.96 spl
+        # self.max_len = int(config.IL.max_traj_len) #  * 0.97 transfered gt path got 0.96 spl
+        self.max_len = 30
 
     def _make_dirs(self):
         if self.config.local_rank == 0:
@@ -1049,17 +1050,27 @@ class RLTrainer(BaseVLNCETrainer):
                         }
                     )
                     prev_vp[i] = front_vp
-                    # if self.config.MODEL.consume_ghost:
-                    #     gmap.delete_ghost(ghost_vp)
-                    gmap.delete_ghost(ghost_vp)
 
-                    # delete img of the selected ghost point that is gonna be visited
-                    idx = agent.prompt_manager.nodes_list[i].index(ghost_vp)
-                    agent.prompt_manager.node_imgs[i][idx] = None
-                    
-                    for node in agent.prompt_manager.graph[i].keys():
-                        if ghost_vp in agent.prompt_manager.graph[i][node]:
-                            agent.prompt_manager.graph[i][node].remove(ghost_vp)
+                    # search for the ghost vp far away from the current location
+                    sel_ghost = gmap.search_distant_ghost(cur_pos[i])
+
+                    # delete the selected ghost point
+                    # sel_ghost = []
+                    sel_ghost.append(ghost_vp)
+                    for ghost_vp in sel_ghost:
+
+                        # if self.config.MODEL.consume_ghost:
+                        #     gmap.delete_ghost(ghost_vp)
+                        gmap.delete_ghost(ghost_vp)
+
+                        # delete img of the selected ghost point that is gonna be visited
+                        idx = agent.prompt_manager.nodes_list[i].index(ghost_vp)
+                        agent.prompt_manager.node_imgs[i][idx] = None
+                        
+                        # delete the connectivity relation of the selected ghost point and other visited points
+                        for node in agent.prompt_manager.graph[i].keys():
+                            if ghost_vp in agent.prompt_manager.graph[i][node]:
+                                agent.prompt_manager.graph[i][node].remove(ghost_vp)
 
             outputs = self.envs.step(env_actions)
             observations, _, dones, infos = [list(x) for x in zip(*outputs)]

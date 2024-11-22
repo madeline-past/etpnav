@@ -354,3 +354,15 @@ class GraphMap(object):
         rel_dists = np.array(rel_dists).astype(np.float32)
         rel_ang_fts = get_angle_fts(rel_angles[:, 0], rel_angles[:, 1], angle_feat_size=4)
         return np.concatenate([rel_ang_fts, rel_dists], 1)
+
+    def search_distant_ghost(self, cur_pos, thresho1d = 3.0):
+        distant_ghost = []
+
+        for kvp, kpos in self.ghost_mean_pos.items():
+            dis = calc_position_distance(cur_pos, kpos)
+            if dis >= thresho1d:
+                distant_ghost.append(kvp)
+
+        return distant_ghost
+
+
