@@ -282,7 +282,7 @@ class GraphMap(object):
         self.shortest_path = dict(nx.all_pairs_dijkstra_path(self.graph_nx))
         self.shortest_dist = dict(nx.all_pairs_dijkstra_path_length(self.graph_nx))
 
-        return nearby_cand_wp, imgs
+        return list(nearby_cand_wp), imgs
 
     def front_to_ghost_dist(self, ghost_vp):
         # assume the nearest front
