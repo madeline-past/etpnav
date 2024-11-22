@@ -149,11 +149,13 @@ class OneStagePromptManager(object):
 
                 adj_text = ''
                 adjacent_nodes = graph[node]
-                for adj_node in adjacent_nodes:
-                    adj_index = nodes_list.index(adj_node)
-                    adj_text += f""" {adj_index},"""
 
-                graph_text += f"""\nPlace {node_index} is connected with Places{adj_text}"""[:-1]
+                if adjacent_nodes != []:
+                    for adj_node in adjacent_nodes:
+                        adj_index = nodes_list.index(adj_node)
+                        adj_text += f""" {adj_index},"""
+
+                    graph_text += f"""\nPlace {node_index} is connected with Places{adj_text}"""[:-1]
 
         # # ghost nodes info
         # graph_supp_text = ''
