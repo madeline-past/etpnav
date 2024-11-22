@@ -64,7 +64,7 @@ class GPTNavAgent():
                 if traj is not None:
                     traj[i]['path'].append([state.location.viewpointId])
 
-    def rollout(self, vp, nearby_cand_wp, gmaps, batch_size, instr, cand_img, t, response_format='json', llm='gpt-4o-2024-08-06'):
+    def rollout(self, vp, nearby_cand_wp, gmaps, batch_size, instr, cand_img, t, new_ghost_node, response_format='json', llm='gpt-4o-2024-08-06'):
 
         # Record the navigation path
         
@@ -93,7 +93,7 @@ class GPTNavAgent():
 
 
 
-        cand_inputs = self.prompt_manager.make_action_prompt(vp, ghost_vp_ids, cand_img, nearby_cand_wp)
+        cand_inputs = self.prompt_manager.make_action_prompt(vp, ghost_vp_ids, cand_img, nearby_cand_wp, new_ghost_node)
         if response_format == 'str':
             nav_input = self.prompt_manager.make_r2r_prompts(cand_inputs=cand_inputs, instr=instr, t=t)
         elif response_format == 'json':

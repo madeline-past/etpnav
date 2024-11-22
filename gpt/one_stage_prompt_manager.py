@@ -40,7 +40,7 @@ class OneStagePromptManager(object):
 
         return action_text
 
-    def make_action_prompt(self, vp, cand_wp, cand_img, nearby_cand_wp):
+    def make_action_prompt(self, vp, cand_wp, cand_img, nearby_cand_wp, new_ghost_node):
 
         nodes_list, graph, trajectory, node_imgs = self.nodes_list, self.graph, self.trajectory, self.node_imgs
 
@@ -48,7 +48,7 @@ class OneStagePromptManager(object):
         batch_cand_index = []
         batch_action_prompts = []
 
-        for i, (viewpoint, cand_waypoint, c_img, nb_cand_wp) in enumerate(zip(vp, cand_wp, cand_img, nearby_cand_wp)):
+        for i, (viewpoint, cand_waypoint, c_img, nb_cand_wp, ghost_node) in enumerate(zip(vp, cand_wp, cand_img, nearby_cand_wp, new_ghost_node)):
             cand_vpids = []
             cand_index = []
             action_prompts = []
@@ -62,9 +62,9 @@ class OneStagePromptManager(object):
             trajectory[i].append(viewpoint)
 
             # cand views
-            for j, (cc, img) in enumerate(zip(cand_waypoint, c_img)):
+            for j, (cc, img) in enumerate(zip(ghost_node, c_img)):
 
-                cand_vpids.append(cc)
+                # cand_vpids.append(cc)
                 # cand_index.append(cc['pointId'])
                 # direction = self.get_action_concept(cc['absolute_heading'] - previous_angle[i]['heading'],
                 #                                           cc['absolute_elevation'] - 0)
@@ -72,10 +72,13 @@ class OneStagePromptManager(object):
                 if cc not in nodes_list[i]:
                     nodes_list[i].append(cc)
                     node_imgs[i].append(img)
-                    node_index = nodes_list[i].index(cc)
+                    # node_index = nodes_list[i].index(cc)
                 else:
                     node_index = nodes_list[i].index(cc)
                     node_imgs[i][node_index] = img
+
+            for cc in cand_waypoint:
+                node_index = nodes_list[i].index(cc)     
 
                 # action_text = direction + f" to Place {node_index} which is corresponding to Image {node_index}"
                 action_text = f" Go to Place {node_index} which is corresponding to Image {node_index}"
@@ -134,7 +137,7 @@ class OneStagePromptManager(object):
         trajectory_text = 'Place'
         graph_text = ''
 
-        candidate_nodes = graph[trajectory[-1]]
+        # candidate_nodes = graph[trajectory[-1]]
 
         # trajectory and map connectivity
         for node in trajectory:
@@ -150,23 +153,23 @@ class OneStagePromptManager(object):
                     adj_index = nodes_list.index(adj_node)
                     adj_text += f""" {adj_index},"""
 
-                # graph_text += f"""\nPlace {node_index} is connected with Places{adj_text}"""[:-1]
-                graph_text += f"""\nPlace {node_index} is connected with Places{adj_text}"""
+                graph_text += f"""\nPlace {node_index} is connected with Places{adj_text}"""[:-1]
 
-        # ghost nodes info
-        graph_supp_text = ''
-        supp_exist = None
-        for node_index, node in enumerate(nodes_list):
+        # # ghost nodes info
+        # graph_supp_text = ''
+        # supp_exist = None
+        # for node_index, node in enumerate(nodes_list):
 
-            if node in trajectory or node in candidate_nodes:
-                continue
-            supp_exist = True
-            graph_supp_text += f"""\nPlace {node_index}, which is corresponding to Image {node_index}"""
+        #     if node in trajectory or node in candidate_nodes:
+        #         continue
+        #     supp_exist = True
+        #     graph_supp_text += f"""\nPlace {node_index}, which is corresponding to Image {node_index}"""
 
-        if supp_exist is None:
-            graph_supp_text = """Nothing yet."""
+        # if supp_exist is None:
+        #     graph_supp_text = """Nothing yet."""
 
-        return trajectory_text, graph_text, graph_supp_text
+        # return trajectory_text, graph_text, graph_supp_text
+        return trajectory_text, graph_text
 
     def make_r2r_prompts(self, obs, cand_inputs, t):
 
@@ -177,18 +180,20 @@ class OneStagePromptManager(object):
         instr_des = """'Instruction' is a global, step-by-step detailed guidance, but you might have already executed some of the commands. You need to carefully discern the commands that have not been executed yet."""
         traj_info = """'Trajectory' represents the ID info of the places you have explored. You start navigating from Place 0."""
         map_info = """'Map' refers to the connectivity between the places you have explored and other places you have observed."""
-        map_supp = """'Supplementary Info' records some places and their corresponding images you have ever seen but have not yet visited. These places are only considered when there is a navigation error, and you decide to backtrack for further exploration."""
+        # map_supp = """'Supplementary Info' records some places and their corresponding images you have ever seen but have not yet visited. These places are only considered when there is a navigation error, and you decide to backtrack for further exploration."""
         history = """'History' represents the places you have explored in previous steps along with their corresponding images. It may include the correct landmarks mentioned in the 'Instruction' as well as some past erroneous explorations."""
         option = """'Action options' are some actions that you can take at this step."""
         pre_planning = """'Previous Planning' records previous long-term multi-step planning info that you can refer to now."""
 
         requirement = """For each provided image of the places, you should combine the 'Instruction' and carefully examine the relevant information, such as scene descriptions, landmarks, and objects. You need to align 'Instruction' with 'History' (including corresponding images) to estimate your instruction execution progress and refer to 'Map' for path planning. Check the Place IDs in the 'History' and 'Trajectory', avoiding repeated exploration that leads to getting stuck in a loop, unless it is necessary to backtrack to a specific place."""
         dist_require = """If you can already see the destination, estimate the distance between you and it. If the distance is far, continue moving and try to stop within 1 meter of the destination."""
-        thought = """Your answer must include four parts: 'Thought', 'Distance', 'New Planning', and 'Action'. You need to combine 'Instruction', 'Trajectory', 'Map', 'Supplementary Info', your past 'History', 'Previous Planning', 'Action options', and the provided images to think about what to do next and why, and complete your thinking into 'Thought'."""
+        # thought = """Your answer must include four parts: 'Thought', 'Distance', 'New Planning', and 'Action'. You need to combine 'Instruction', 'Trajectory', 'Map', 'Supplementary Info', your past 'History', 'Previous Planning', 'Action options', and the provided images to think about what to do next and why, and complete your thinking into 'Thought'."""
+        thought = """Your answer must include four parts: 'Thought', 'Distance', 'New Planning', and 'Action'. You need to combine 'Instruction', 'Trajectory', 'Map', your past 'History', 'Previous Planning', 'Action options', and the provided images to think about what to do next and why, and complete your thinking into 'Thought'."""
         new_planning = """Based on your 'Map', 'Previous Planning' and current 'Thought', you also need to update your new multi-step path planning to 'New Planning'."""
         action = """At the end of your output, you must provide a single capital letter in the 'Action options' that corresponds to the action you have decided to take, and place only the letter into 'Action', such as "Action: A"."""
 
-        task_description = f"""{background} {background_supp}\n{instr_des}\n{history}\n{traj_info}\n{map_info}\n{map_supp}\n{pre_planning}\n{option}\n{requirement}\n{dist_require}\n{thought}\n{new_planning}\n{action}"""
+        # task_description = f"""{background} {background_supp}\n{instr_des}\n{history}\n{traj_info}\n{map_info}\n{map_supp}\n{pre_planning}\n{option}\n{requirement}\n{dist_require}\n{thought}\n{new_planning}\n{action}"""
+        task_description = f"""{background} {background_supp}\n{instr_des}\n{history}\n{traj_info}\n{map_info}\n{pre_planning}\n{option}\n{requirement}\n{dist_require}\n{thought}\n{new_planning}\n{action}"""
 
         init_history = 'The navigation has just begun, with no history.'
 
@@ -198,12 +203,19 @@ class OneStagePromptManager(object):
         for i in range(batch_size):
             instruction = obs[i]["instruction"]
 
-            trajectory_text, graph_text, graph_supp_text = self.make_map_prompt(i)
+            # trajectory_text, graph_text, graph_supp_text = self.make_map_prompt(i)
+            trajectory_text, graph_text = self.make_map_prompt(i)
+
+            # if t == 0:
+            #     prompt = f"""Instruction: {instruction}\nHistory: {init_history}\nTrajectory: {trajectory_text}\nMap:{graph_text}\nSupplementary Info: {graph_supp_text}\nPrevious Planning:\n{self.planning[i][-1]}\nAction options (step {str(t)}): {action_options_batch[i]}"""
+            # else:
+            #     prompt = f"""Instruction: {instruction}\nHistory: {self.history[i]}\nTrajectory: {trajectory_text}\nMap:{graph_text}\nSupplementary Info: {graph_supp_text}\nPrevious Planning:\n{self.planning[i][-1]}\nAction options (step {str(t)}): {action_options_batch[i]}"""
 
             if t == 0:
-                prompt = f"""Instruction: {instruction}\nHistory: {init_history}\nTrajectory: {trajectory_text}\nMap:{graph_text}\nSupplementary Info: {graph_supp_text}\nPrevious Planning:\n{self.planning[i][-1]}\nAction options (step {str(t)}): {action_options_batch[i]}"""
+                prompt = f"""Instruction: {instruction}\nHistory: {init_history}\nTrajectory: {trajectory_text}\nMap:{graph_text}\nPrevious Planning:\n{self.planning[i][-1]}\nAction options (step {str(t)}): {action_options_batch[i]}"""
             else:
-                prompt = f"""Instruction: {instruction}\nHistory: {self.history[i]}\nTrajectory: {trajectory_text}\nMap:{graph_text}\nSupplementary Info: {graph_supp_text}\nPrevious Planning:\n{self.planning[i][-1]}\nAction options (step {str(t)}): {action_options_batch[i]}"""
+                prompt = f"""Instruction: {instruction}\nHistory: {self.history[i]}\nTrajectory: {trajectory_text}\nMap:{graph_text}\nPrevious Planning:\n{self.planning[i][-1]}\nAction options (step {str(t)}): {action_options_batch[i]}"""
+
 
             prompt_batch.append(prompt)
 
@@ -226,18 +238,18 @@ class OneStagePromptManager(object):
         instr_des = """'Instruction' is a global, step-by-step detailed guidance, but you might have already executed some of the commands. You need to carefully discern the commands that have not been executed yet."""
         traj_info = """'Trajectory' represents the ID info of the places you have explored. You start navigating from Place 0."""
         map_info = """'Map' refers to the connectivity between the places you have explored and other places you have observed."""
-        map_supp = """'Supplementary Info' records some places and their corresponding images you have ever seen but have not yet visited. These places are only considered when there is a navigation error, and you decide to backtrack for further exploration."""
+        # map_supp = """'Supplementary Info' records some places and their corresponding images you have ever seen but have not yet visited. These places are only considered when there is a navigation error, and you decide to backtrack for further exploration."""
         history = """'History' represents the places you have explored in previous steps along with their corresponding images. It may include the correct landmarks mentioned in the 'Instruction' as well as some past erroneous explorations."""
         option = """'Action options' are some actions that you can take at this step."""
         pre_planning = """'Previous Planning' records previous long-term multi-step planning info that you can refer to now."""
 
         requirement = """For each provided image of the places, you should combine the 'Instruction' and carefully examine the relevant information, such as scene descriptions, landmarks, and objects. You need to align 'Instruction' with 'History' (including corresponding images) to estimate your instruction execution progress and refer to 'Map' for path planning. Check the Place IDs in the 'History' and 'Trajectory', avoiding repeated exploration that leads to getting stuck in a loop, unless it is necessary to backtrack to a specific place."""
         dist_require = """If you can already see the destination, estimate the distance between you and it. If the distance is far, continue moving and try to stop within 1 meter of the destination."""
-        thought = """Your answer should be JSON format and must include three fields: 'Thought', 'New Planning', and 'Action'. You need to combine 'Instruction', 'Trajectory', 'Map', 'Supplementary Info', your past 'History', 'Previous Planning', 'Action options', and the provided images to think about what to do next and why, and complete your thinking into 'Thought'."""
+        thought = """Your answer should be JSON format and must include three fields: 'Thought', 'New Planning', and 'Action'. You need to combine 'Instruction', 'Trajectory', 'Map', your past 'History', 'Previous Planning', 'Action options', and the provided images to think about what to do next and why, and complete your thinking into 'Thought'."""
         new_planning = """Based on your 'Map', 'Previous Planning' and current 'Thought', you also need to update your new multi-step path planning to 'New Planning'."""
         action = """At the end of your output, you must provide a single capital letter in the 'Action options' that corresponds to the action you have decided to take, and place only the letter into 'Action', such as "Action: A"."""
 
-        task_description = f"""{background} {background_supp}\n{instr_des}\n{history}\n{traj_info}\n{map_info}\n{map_supp}\n{pre_planning}\n{option}\n{requirement}\n{dist_require}\n{thought}\n{new_planning}\n{action}"""
+        task_description = f"""{background} {background_supp}\n{instr_des}\n{history}\n{traj_info}\n{map_info}\n{pre_planning}\n{option}\n{requirement}\n{dist_require}\n{thought}\n{new_planning}\n{action}"""
 
         init_history = 'The navigation has just begun, with no history.'
 
@@ -247,12 +259,12 @@ class OneStagePromptManager(object):
         for i in range(batch_size):
             instruction = instr[i]
 
-            trajectory_text, graph_text, graph_supp_text = self.make_map_prompt(i)
+            trajectory_text, graph_text = self.make_map_prompt(i)
 
             if t == 0:
-                prompt = f"""Instruction: {instruction}\nHistory: {init_history}\nTrajectory: {trajectory_text}\nMap:{graph_text}\nSupplementary Info: {graph_supp_text}\nPrevious Planning:\n{self.planning[i][-1]}\nAction options (step {str(t)}): {action_options_batch[i]}"""
+                prompt = f"""Instruction: {instruction}\nHistory: {init_history}\nTrajectory: {trajectory_text}\nMap:{graph_text}\nPrevious Planning:\n{self.planning[i][-1]}\nAction options (step {str(t)}): {action_options_batch[i]}"""
             else:
-                prompt = f"""Instruction: {instruction}\nHistory: {self.history[i]}\nTrajectory: {trajectory_text}\nMap:{graph_text}\nSupplementary Info: {graph_supp_text}\nPrevious Planning:\n{self.planning[i][-1]}\nAction options (step {str(t)}): {action_options_batch[i]}"""
+                prompt = f"""Instruction: {instruction}\nHistory: {self.history[i]}\nTrajectory: {trajectory_text}\nMap:{graph_text}\nPrevious Planning:\n{self.planning[i][-1]}\nAction options (step {str(t)}): {action_options_batch[i]}"""
 
             prompt_batch.append(prompt)
 

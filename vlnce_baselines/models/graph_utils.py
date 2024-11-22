@@ -207,7 +207,8 @@ class GraphMap(object):
                            cand_vp, cand_pos, cand_embeds, 
                            cand_real_pos, imgs):
         nearby_cand_wp = set()
-        
+        new_ghost_node = []
+
         # 1. connect prev_vp
         self.graph_nx.add_node(cur_vp)
         if prev_vp is not None:
@@ -219,8 +220,9 @@ class GraphMap(object):
         self.node_pos[cur_vp] = cur_pos
         self.node_embeds[cur_vp] = cur_embeds
         self.node_stepId[cur_vp] = step_id
+
+        del_idx = 0
         for i, (cvp, cpos, cembeds) in enumerate(zip(cand_vp, cand_pos, cand_embeds)):
-            del_idx = 0
             localized_nvp = self._localize(cpos, self.node_pos)
             # cand overlap with node, connect cur_vp with localized_nvp
             if localized_nvp is not None :
@@ -245,6 +247,7 @@ class GraphMap(object):
                         if self.has_real_pos:
                             self.ghost_real_pos[gvp] = [cand_real_pos[i]]
                         nearby_cand_wp.add(gvp)
+                        new_ghost_node.append(gvp)
                     # update ghost
                     else:
                         gvp = localized_gvp
@@ -270,6 +273,7 @@ class GraphMap(object):
                     if self.has_real_pos:
                         self.ghost_real_pos[gvp] = [cand_real_pos[i]]
                     nearby_cand_wp.add(gvp)
+                    new_ghost_node.append(gvp)
         
         self.ghost_aug_pos = deepcopy(self.ghost_mean_pos)
         if self.ghost_aug != 0:
@@ -282,7 +286,7 @@ class GraphMap(object):
         self.shortest_path = dict(nx.all_pairs_dijkstra_path(self.graph_nx))
         self.shortest_dist = dict(nx.all_pairs_dijkstra_path_length(self.graph_nx))
 
-        return list(nearby_cand_wp), imgs
+        return list(nearby_cand_wp), imgs, new_ghost_node
 
     def front_to_ghost_dist(self, ghost_vp):
         # assume the nearest front

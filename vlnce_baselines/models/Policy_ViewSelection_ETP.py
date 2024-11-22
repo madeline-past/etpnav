@@ -357,6 +357,8 @@ class ETP(Net):
                 'cand_img':cand_img
             }
             
+            # print(cand_img_idxes,cand_angles,cand_distances,len(cand_img[0]))
+
             return outputs
 
         elif mode == 'panorama':
