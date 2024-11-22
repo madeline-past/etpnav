@@ -206,7 +206,7 @@ class GraphMap(object):
                            cur_vp, cur_pos, cur_embeds,
                            cand_vp, cand_pos, cand_embeds, 
                            cand_real_pos, imgs):
-        nearby_cand_wp = []
+        nearby_cand_wp = set()
         
         # 1. connect prev_vp
         self.graph_nx.add_node(cur_vp)
@@ -244,7 +244,7 @@ class GraphMap(object):
                         self.ghost_fronts[gvp] = [cur_vp]
                         if self.has_real_pos:
                             self.ghost_real_pos[gvp] = [cand_real_pos[i]]
-                        nearby_cand_wp.append(gvp)
+                        nearby_cand_wp.add(gvp)
                     # update ghost
                     else:
                         gvp = localized_gvp
@@ -257,6 +257,7 @@ class GraphMap(object):
                             self.ghost_real_pos[gvp].append(cand_real_pos[i])
                         imgs.pop(i-del_idx)
                         del_idx += 1
+                        nearby_cand_wp.add(gvp)
                 else:
                     # gvp = f'g{str(self.ghost_cnt)}'
                     gvp = str(self.allnode_cnt)
@@ -268,7 +269,7 @@ class GraphMap(object):
                     self.ghost_fronts[gvp] = [cur_vp]
                     if self.has_real_pos:
                         self.ghost_real_pos[gvp] = [cand_real_pos[i]]
-                    nearby_cand_wp.append(gvp)
+                    nearby_cand_wp.add(gvp)
         
         self.ghost_aug_pos = deepcopy(self.ghost_mean_pos)
         if self.ghost_aug != 0:
