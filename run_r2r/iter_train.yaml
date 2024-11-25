@@ -23,7 +23,7 @@ INFERENCE:
 EVAL:
   USE_CKPT_CONFIG: False
   SPLIT: val_unseen
-  EPISODE_COUNT: 10
+  EPISODE_COUNT: 1
   CKPT_PATH_DIR: ''
   fast_eval: False
 

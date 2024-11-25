@@ -68,7 +68,7 @@ class RLTrainer(BaseVLNCETrainer):
     def __init__(self, config=None):
         super().__init__(config)
         # self.max_len = int(config.IL.max_traj_len) #  * 0.97 transfered gt path got 0.96 spl
-        self.max_len = 15
+        self.max_len = 30
 
     def _make_dirs(self):
         if self.config.local_rank == 0:

@@ -73,8 +73,10 @@ def gpt_infer(system, text, image_list, model="gpt-4o-2024-08-06", max_tokens=60
 
     user_content = []
     image_len = 0
+    print("indices of images saved:")
     for i, image in enumerate(image_list):
         if image is not None:
+            print(i)
             image_len += 1
             assert image_len <= 20,'Exceed image limit and stop!'
             user_content.append(
@@ -160,3 +162,71 @@ def gpt_infer(system, text, image_list, model="gpt-4o-2024-08-06", max_tokens=60
     # return answer, tokens
 
 
+
+def gpt_caption(system, text, image, model="gpt-4o-2024-08-06", max_tokens=600, response_format=None):
+
+    user_content = []
+
+    user_content.append(
+        {
+            "type": "text",
+            "text": f"Image :"
+        },
+    )
+
+    image_message = {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{image}",
+                    "detail": "low"
+                }
+            }
+    user_content.append(image_message)
+
+    user_content.append(
+        {
+            "type": "text",
+            "text": text
+        }
+    )
+
+    messages = [
+        {"role": "system",
+         "content": system
+         },
+        {"role": "user",
+         "content": user_content
+         }
+    ]
+
+    try:
+        # 构建请求数据
+        data = {
+            "model": model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": 0
+        }
+        # 如果指定了 response_format，则处理该逻辑
+        if response_format:
+            data["response_format"] = response_format
+
+
+        # 调用 GPT 接口（带重试逻辑）
+        response = completion_with_backoff(data)
+
+        # 验证 response 格式
+        if not isinstance(response, dict):
+            raise ValueError("API 返回的数据格式无效")
+        
+        total_tokens = response["usage"]["total_tokens"]
+        
+        return response["choices"][0]["message"]["content"], total_tokens
+        
+        # answer = response.choices[0].message.content
+        # tokens = response.usage
+
+        # return answer, tokens
+
+    except (KeyError, IndexError) as e:
+        raise ValueError(f"解析 GPT 响应内容失败: {e}, 完整响应为: {response}")

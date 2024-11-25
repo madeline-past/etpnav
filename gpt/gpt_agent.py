@@ -2,7 +2,7 @@ import sys
 import numpy as np
 from collections import defaultdict
 from gpt.one_stage_prompt_manager import OneStagePromptManager
-from gpt.api import gpt_infer
+from gpt.api import gpt_infer,gpt_caption
 import json
 
 
@@ -91,9 +91,17 @@ class GPTNavAgent():
 
         ghost_vp_ids = [list(gmaps[i].ghost_pos.keys()) for i in range(batch_size)]
 
+        caption_input = self.prompt_manager.img_caption()
+        caption_output = [[] for _ in range(batch_size)]
+        
+        for i in range(len(cand_img[0])):
+            caption, _ = gpt_caption(caption_input["task_description"], caption_input["prompt"], cand_img[0][i])
 
+            caption_output[0].append(caption)
 
-        cand_inputs = self.prompt_manager.make_action_prompt(vp, ghost_vp_ids, cand_img, nearby_cand_wp, new_ghost_node)
+        print(caption_output[0])
+
+        cand_inputs = self.prompt_manager.make_action_prompt(vp, ghost_vp_ids, cand_img, nearby_cand_wp, new_ghost_node, caption_output)
         if response_format == 'str':
             nav_input = self.prompt_manager.make_r2r_prompts(cand_inputs=cand_inputs, instr=instr, t=t)
         elif response_format == 'json':

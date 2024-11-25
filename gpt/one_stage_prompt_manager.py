@@ -11,6 +11,7 @@ class OneStagePromptManager(object):
         self.history  = ['' for _ in range(self.batch_size)]
         self.nodes_list = [[] for _ in range(self.batch_size)]
         self.node_imgs = [[] for _ in range(self.batch_size)]
+        self.node_imgcaptions = [[] for _ in range(self.batch_size)]
         self.graph  = [{} for _ in range(self.batch_size)]
         self.trajectory = [[] for _ in range(self.batch_size)]
         self.planning = [["Navigation has just started, with no planning yet."] for _ in range(self.batch_size)]
@@ -40,29 +41,32 @@ class OneStagePromptManager(object):
 
         return action_text
 
-    def make_action_prompt(self, vp, cand_wp, cand_img, nearby_cand_wp, new_ghost_node):
+    def make_action_prompt(self, vp, cand_wp, cand_img, nearby_cand_wp, new_ghost_node, caption_output):
 
-        nodes_list, graph, trajectory, node_imgs = self.nodes_list, self.graph, self.trajectory, self.node_imgs
+        nodes_list, graph, trajectory, node_imgs, node_imgcaptions = self.nodes_list, self.graph, self.trajectory, self.node_imgs, self.node_imgcaptions
 
         batch_view_lens, batch_cand_vpids = [], []
         batch_cand_index = []
         batch_action_prompts = []
+        batch_action_captions = []
 
-        for i, (viewpoint, cand_waypoint, c_img, nb_cand_wp, ghost_node) in enumerate(zip(vp, cand_wp, cand_img, nearby_cand_wp, new_ghost_node)):
+        for i, (viewpoint, cand_waypoint, c_img, nb_cand_wp, ghost_node, caption) in enumerate(zip(vp, cand_wp, cand_img, nearby_cand_wp, new_ghost_node, caption_output)):
             cand_vpids = []
             cand_index = []
             action_prompts = []
+            action_captions = []
 
             if viewpoint not in nodes_list[i]:
                 # update nodes list (place 0)
                 nodes_list[i].append(viewpoint)
                 node_imgs[i].append(None)
+                node_imgcaptions[i].append(None)
 
             # update trajectory
             trajectory[i].append(viewpoint)
 
             # cand views
-            for j, (cc, img) in enumerate(zip(ghost_node, c_img)):
+            for j, (cc, img, cap) in enumerate(zip(ghost_node, c_img, caption)):
 
                 # cand_vpids.append(cc)
                 # cand_index.append(cc['pointId'])
@@ -72,21 +76,26 @@ class OneStagePromptManager(object):
                 if cc not in nodes_list[i]:
                     nodes_list[i].append(cc)
                     node_imgs[i].append(img)
+                    node_imgcaptions[i].append(cap)
                     # node_index = nodes_list[i].index(cc)
                 else:
                     node_index = nodes_list[i].index(cc)
                     node_imgs[i][node_index] = img
+                    node_imgcaptions[i][node_index] = cap
 
             for cc in cand_waypoint:
                 node_index = nodes_list[i].index(cc)     
 
                 # action_text = direction + f" to Place {node_index} which is corresponding to Image {node_index}"
                 action_text = f" Go to Place {node_index} which is corresponding to Image {node_index}"
+                action_caption_text = f" Go to Place {node_index} which is {node_imgcaptions[i][node_index]}"
                 action_prompts.append(action_text)
+                action_captions.append(action_caption_text)
 
             # batch_cand_index.append(cand_index)
             batch_cand_vpids.append(cand_vpids)
             batch_action_prompts.append(action_prompts)
+            batch_action_captions.append(action_captions)
 
             # update graph
             if viewpoint not in graph[i].keys():
@@ -96,6 +105,7 @@ class OneStagePromptManager(object):
             'cand_vpids': batch_cand_vpids,
             # 'cand_index':batch_cand_index,
             'action_prompts': batch_action_prompts,
+            'action_captions': batch_action_captions
         }
 
     def make_action_options(self, cand_inputs, t):
@@ -120,8 +130,8 @@ class OneStagePromptManager(object):
     def make_history(self, a_t, nav_input, t):
         batch_size = len(a_t)
         for i in range(batch_size):
-            nav_input["only_actions"][i] = ['stop'] + nav_input["only_actions"][i]
-            last_action = nav_input["only_actions"][i][a_t[i]]
+            nav_input["only_action_captions"][i] = ['stop'] + nav_input["only_action_captions"][i]
+            last_action = nav_input["only_action_captions"][i][a_t[i]]
             if t == 0:
                 self.history[i] += f"""step {str(t)}: {last_action}"""
             else:
@@ -171,7 +181,7 @@ class OneStagePromptManager(object):
         #     graph_supp_text = """Nothing yet."""
 
         # return trajectory_text, graph_text, graph_supp_text
-        return trajectory_text, graph_text
+        return trajectory_text, graph_text, 
 
     def make_r2r_prompts(self, obs, cand_inputs, t):
 
@@ -275,7 +285,8 @@ class OneStagePromptManager(object):
             "prompts" : prompt_batch,
             "only_options": only_options_batch,
             "action_options": action_options_batch,
-            "only_actions": cand_inputs["action_prompts"]
+            "only_actions": cand_inputs["action_prompts"],
+            "only_action_captions": cand_inputs["action_captions"]
         }
 
         return nav_input
@@ -368,3 +379,17 @@ class OneStagePromptManager(object):
 
         output_index_batch = [output_index]
         return output_index_batch
+
+
+    def img_caption(self):
+        task_description = """You are a helpful assistant."""
+        task = """You are provided by an image that is captured in an indoor environment.Your task is to identify what the scene looks like and describe it in one sentence."""
+        example = """You should not provide a full sentence.For example,you should just output 'a living room with a sofa, a coffee table, and wall decorations' instead of 'The image appears to be a living room with a sofa, a coffee table, and wall decorations.' """
+        prompt = f"""{task}\n{example}"""
+        
+        input = {
+            "task_description" : task_description,
+            "prompt" : prompt
+        }
+        
+        return input
