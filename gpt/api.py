@@ -73,10 +73,10 @@ def gpt_infer(system, text, image_list, model="gpt-4o-2024-08-06", max_tokens=60
 
     user_content = []
     image_len = 0
-    print("indices of images saved:")
+    # print("indices of images saved:")
     for i, image in enumerate(image_list):
         if image is not None:
-            print(i)
+            # print(i)
             image_len += 1
             assert image_len <= 20,'Exceed image limit and stop!'
             user_content.append(
