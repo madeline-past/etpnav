@@ -1071,6 +1071,8 @@ class RLTrainer(BaseVLNCETrainer):
                     # delete the selected ghost point
                     # sel_ghost = []
                     # sel_ghost.append(ghost_vp)
+
+                    # sel_ghost = list(gmap.ghost_pos.keys())
                     for ghost_vp in sel_ghost:
 
                         # if self.config.MODEL.consume_ghost:

@@ -23,7 +23,7 @@ INFERENCE:
 EVAL:
   USE_CKPT_CONFIG: False
   SPLIT: val_unseen
-  EPISODE_COUNT: 1
+  EPISODE_COUNT: 5
   CKPT_PATH_DIR: ''
   fast_eval: False
 
@@ -40,7 +40,7 @@ IL:
   
   max_traj_len: 15
   max_text_len: 80
-  loc_noise: 0.5
+  loc_noise: 0.75
   waypoint_aug: False
   ghost_aug: 0.0
   back_algo: teleport
